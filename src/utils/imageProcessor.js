@@ -4,32 +4,36 @@
  */
 
 /**
+ * 厘米转像素
+ * @param {number} cm - 厘米
+ * @param {number} dpi - 分辨率
+ * @returns {number} 像素值
+ */
+export function cmToPx(cm, dpi) {
+  return Math.round(cm / 2.54 * dpi);
+}
+
+/**
  * 绘制处理后的图片到 Canvas
  * @param {CanvasRenderingContext2D} ctx - Canvas 上下文
  * @param {HTMLImageElement} img - 源图片
- * @param {number} targetW - 目标宽度
- * @param {number} targetH - 目标高度
+ * @param {number} canvasW - 画布宽度（像素）
+ * @param {number} canvasH - 画布高度（像素）
  * @param {object} opts - 处理选项
  * @param {number} opts.zoom - 缩放百分比 (50-150)
  * @param {number} opts.offsetX - 水平偏移百分比 (-100~100)
  * @param {number} opts.offsetY - 垂直偏移百分比 (-100~100)
  * @param {number} opts.rotation - 旋转角度 (0/90/180/270)
  * @param {string} opts.fillColor - 填充背景色 (#hex)
- * @param {number} quality - 输出倍率 (1/2/4)
  */
-export function renderImage(ctx, img, targetW, targetH, opts, quality = 1) {
-  const q = quality || 1;
+export function renderImage(ctx, img, canvasW, canvasH, opts) {
   const canvas = ctx.canvas;
-  const w = targetW * q;
-  const h = targetH * q;
-
-  // 设置 canvas 尺寸（调用方已处理好旋转的宽高交换）
-  canvas.width = w;
-  canvas.height = h;
+  canvas.width = canvasW;
+  canvas.height = canvasH;
 
   // 填充背景
   ctx.fillStyle = opts.fillColor || '#FFFFFF';
-  ctx.fillRect(0, 0, w, h);
+  ctx.fillRect(0, 0, canvasW, canvasH);
 
   // 计算图片在目标区域内的适配尺寸（pad模式：保持完整，添加白边）
   const imgAspect = img.naturalWidth / img.naturalHeight;
@@ -37,18 +41,16 @@ export function renderImage(ctx, img, targetW, targetH, opts, quality = 1) {
 
   if (opts.rotation % 180 !== 0) {
     // 90°/270° 旋转：绘制后宽高会互换，需要反向约束
-    // 旋转后：有效宽度 = 绘制高度, 有效高度 = 绘制宽度
-    // 需要: 绘制高度 ≤ 画布宽度, 绘制宽度 ≤ 画布高度
-    imgH = Math.min(w, h / imgAspect);
+    imgH = Math.min(canvasW, canvasH / imgAspect);
     imgW = imgH * imgAspect;
   } else {
-    const targetAspect = targetW / targetH;
+    const targetAspect = canvasW / canvasH;
     if (imgAspect > targetAspect) {
-      imgW = w;
-      imgH = w / imgAspect;
+      imgW = canvasW;
+      imgH = canvasW / imgAspect;
     } else {
-      imgH = h;
-      imgW = h * imgAspect;
+      imgH = canvasH;
+      imgW = canvasH * imgAspect;
     }
   }
 
@@ -58,20 +60,20 @@ export function renderImage(ctx, img, targetW, targetH, opts, quality = 1) {
   imgH *= zoomFactor;
 
   // 计算偏移 (百分比 → 像素)
-  const maxOffsetX = (imgW - w) / 2;
-  const maxOffsetY = (imgH - h) / 2;
+  const maxOffsetX = (imgW - canvasW) / 2;
+  const maxOffsetY = (imgH - canvasH) / 2;
   const offsetXPx = maxOffsetX * ((opts.offsetX || 0) / 100);
   const offsetYPx = maxOffsetY * ((opts.offsetY || 0) / 100);
 
   // 绘制位置（居中 + 偏移）
-  const drawX = (w - imgW) / 2 + offsetXPx;
-  const drawY = (h - imgH) / 2 + offsetYPx;
+  const drawX = (canvasW - imgW) / 2 + offsetXPx;
+  const drawY = (canvasH - imgH) / 2 + offsetYPx;
 
   // 处理旋转
   ctx.save();
   if (opts.rotation % 360 !== 0) {
-    const cx = w / 2;
-    const cy = h / 2;
+    const cx = canvasW / 2;
+    const cy = canvasH / 2;
     ctx.translate(cx, cy);
     ctx.rotate((opts.rotation * Math.PI) / 180);
     ctx.translate(-cx, -cy);

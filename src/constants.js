@@ -1,16 +1,16 @@
-/** 拼图尺寸配置 (名称 → 像素宽高) */
+/** 拼图尺寸配置 (物理厘米) */
 export const SIZES = [
-  { name: '35片', width: 1181, height: 1772, label: '10×15cm' },
-  { name: '70片', width: 1772, height: 2362, label: '15×20cm' },
-  { name: '120片', width: 2362, height: 2953, label: '20×25cm' },
-  { name: '200片', width: 2480, height: 3543, label: '21×30cm' },
-  { name: '300/520片', width: 3071, height: 4488, label: '26×38cm' },
+  { name: '35片', widthCm: 10, heightCm: 15, label: '10×15cm' },
+  { name: '70片', widthCm: 15, heightCm: 20, label: '15×20cm' },
+  { name: '120片', widthCm: 20, heightCm: 25, label: '20×25cm' },
+  { name: '200片', widthCm: 21, heightCm: 30, label: '21×30cm' },
+  { name: '300/520片', widthCm: 26, heightCm: 38, label: '26×38cm' },
 ];
 
-/** 输出质量倍率 */
+/** 输出质量 (DPI) */
 export const QUALITIES = [
-  { name: '原图', value: 1 },
-  { name: '高清', value: 2 },
+  { name: '原图', dpi: 72 },
+  { name: '高清', dpi: 300 },
 ];
 
 /** 预设填充颜色 */
@@ -25,7 +25,7 @@ export const PRESET_COLORS = [
 /** 默认设置 */
 export const DEFAULTS = {
   sizeIndex: 0,            // 默认 35片
-  quality: 1,              // 默认 1x
+  quality: 72,             // 默认 72 DPI（原图）
   fillColor: '#FFFFFF',    // 默认纯白
   zoom: 100,               // 默认 100%
   offsetX: 0,              // 默认水平居中

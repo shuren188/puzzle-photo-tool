@@ -1,5 +1,5 @@
 import { SIZES, QUALITIES, PRESET_COLORS, DEFAULTS, TEXT, DRAG_SENSITIVITY } from '../constants.js';
-import { renderImage, loadImage, getPreviewSize } from '../utils/imageProcessor.js';
+import { renderImage, loadImage, getPreviewSize, cmToPx } from '../utils/imageProcessor.js';
 import { downloadImage, getOutputFilename, isWeChat } from '../utils/download.js';
 import { ColorPicker } from './ColorPicker.js';
 
@@ -89,8 +89,9 @@ export class App {
 
   renderQualityButtons() {
     this.els.qualityGroup.innerHTML = QUALITIES.map((q, i) => `
-      <button class="quality-btn${i === 0 ? ' active' : ''}" data-value="${q.value}">
+      <button class="quality-btn${i === 0 ? ' active' : ''}" data-dpi="${q.dpi}">
         <span class="q-name">${q.name}</span>
+        <span class="q-dpi">${q.dpi} DPI</span>
       </button>
     `).join('');
   }
@@ -151,7 +152,7 @@ export class App {
       if (!btn) return;
       this.els.qualityGroup.querySelectorAll('.quality-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      this.state.quality = parseInt(btn.dataset.value);
+      this.state.quality = parseInt(btn.dataset.dpi);
       this.scheduleRender();
     });
 
@@ -276,8 +277,8 @@ export class App {
     const previewH = this.els.previewCanvas.height;
     const size = this.state.selectedSize;
     const needsRotation = this.state.rotation % 180 !== 0;
-    const tw = needsRotation ? size.height : size.width;
-    const th = needsRotation ? size.width : size.height;
+    const tw = needsRotation ? size.heightCm : size.widthCm;
+    const th = needsRotation ? size.widthCm : size.heightCm;
 
     // 计算预览中的图片实际绘制尺寸
     const imgAspect = this.state.image.naturalWidth / this.state.image.naturalHeight;
@@ -404,13 +405,13 @@ export class App {
     const ctx = canvas.getContext('2d');
     const size = this.state.selectedSize;
 
-    // 处理旋转导致的宽高交换
+    // 处理旋转导致的宽高交换（使用物理厘米计算比例）
     const needsRotation = this.state.rotation % 180 !== 0;
-    const targetW = needsRotation ? size.height : size.width;
-    const targetH = needsRotation ? size.width : size.height;
+    const cmW = needsRotation ? size.heightCm : size.widthCm;
+    const cmH = needsRotation ? size.widthCm : size.heightCm;
 
     // 计算预览尺寸
-    const previewSize = getPreviewSize(targetW, targetH, 260);
+    const previewSize = getPreviewSize(cmW, cmH, 260);
     const wrapper = this.els.canvasWrapper;
 
     // 更新 canvas 尺寸（逻辑像素）
@@ -421,13 +422,13 @@ export class App {
     wrapper.style.height = previewSize.height + 'px';
 
     // 渲染到预览
-    renderImage(ctx, this.state.image, targetW, targetH, {
+    renderImage(ctx, this.state.image, previewSize.width, previewSize.height, {
       zoom: this.state.zoom,
       offsetX: this.state.offsetX,
       offsetY: this.state.offsetY,
       rotation: this.state.rotation,
       fillColor: this.state.fillColor,
-    }, 1);
+    });
 
     // 移除更新闪烁
     this.els.canvasWrapper.classList.remove('updating');
@@ -443,32 +444,35 @@ export class App {
       this.els.downloadBtn.textContent = '处理中...';
 
       const size = this.state.selectedSize;
-      const q = this.state.quality;
+      const dpi = this.state.quality;
+
+      // 由物理厘米 × DPI 计算输出像素尺寸
+      const needsRotation = this.state.rotation % 180 !== 0;
+      const cmW = needsRotation ? size.heightCm : size.widthCm;
+      const cmH = needsRotation ? size.widthCm : size.heightCm;
+      const pxW = cmToPx(cmW, dpi);
+      const pxH = cmToPx(cmH, dpi);
 
       // 创建离屏 canvas 进行高质量渲染
       const offscreen = document.createElement('canvas');
       const ctx = offscreen.getContext('2d');
 
-      const needsRotation = this.state.rotation % 180 !== 0;
-      const targetW = needsRotation ? size.height : size.width;
-      const targetH = needsRotation ? size.width : size.height;
-
-      renderImage(ctx, this.state.image, targetW, targetH, {
+      renderImage(ctx, this.state.image, pxW, pxH, {
         zoom: this.state.zoom,
         offsetX: this.state.offsetX,
         offsetY: this.state.offsetY,
         rotation: this.state.rotation,
         fillColor: this.state.fillColor,
-      }, q);
+      });
 
       // 确定输出格式
       const format = 'image/png';
-      const filename = getOutputFilename(size.name, q);
+      const filename = getOutputFilename(size.name, dpi);
 
       // 小延迟让 UI 更新
       await new Promise(r => setTimeout(r, 50));
 
-      downloadImage(offscreen, filename, format, 0.95);
+      downloadImage(offscreen, filename, format, dpi);
       this.showToast('图片已生成，开始下载');
     } catch (err) {
       this.showToast('下载失败，请重试');

@@ -606,6 +606,15 @@ body::after {
   z-index: 1;
 }
 
+.quality-btn .q-dpi {
+  display: block;
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+  position: relative;
+  z-index: 1;
+}
+
 .quality-btn:hover {
   background: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.15);
